@@ -1,0 +1,1 @@
+unsigned char code[] = " --- SHELCODE ---";
