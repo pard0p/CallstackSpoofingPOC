@@ -1,14 +1,16 @@
 # 🦠 Cordyceps
-This project consists of a simple C++ self-Injecting dropper focused on EDR evasion. To implement it, I have combined the use of  **``Windows Thread Pooling``**  to hide the call stack and the use of  **``indirect syscalls``**  to avoid hooking in the NTDLL.
+This project consists of a simple C++ self-Injecting dropper focused on EDR evasion POC. To implement it, I have combined the use of  **``Windows Thread Pooling``**  to hide the call stack and the use of  **``indirect syscalls``**  to avoid hooking in the NTDLL.
 <br>
 
 ![2023-10-08-23-22-35-Trim](https://github.com/pard0p/Cordyceps/assets/79936108/060db2ad-2c02-4501-bc86-5be0cff78711)
 
-![image](https://github.com/pard0p/Cordyceps/assets/79936108/5d2cb59c-0ea8-4f8b-ad68-298098e9b6c2)
+![image](https://github.com/pard0p/Cordyceps/assets/79936108/231e3722-9190-4846-88d9-66870acb7eb2)
 
-![image](https://github.com/pard0p/Cordyceps/assets/79936108/1242c777-5c08-404d-8a7c-33da3e3cb478)
+![image](https://github.com/pard0p/Cordyceps/assets/79936108/742dee9c-7c91-41cb-9dd9-4a22985bfc5b)
 
-![image](https://github.com/pard0p/Cordyceps/assets/79936108/c74137be-8e4e-434b-b6c4-faf90baf7be2)
+![image](https://github.com/pard0p/Cordyceps/assets/79936108/aeefb8d2-cf8a-4d79-969a-7e195e878731)
+
+![image](https://github.com/pard0p/Cordyceps/assets/79936108/eac6158f-f1f6-41f7-878f-2c1333a06b54)
 
 As can be seen in the images, from the Cordyceps code, it performs a jump to ntdll to utilize one of the syscall instructions. This should be considered a malicious action; however, upon executing the return in ntdll, we return to the code of tpWorker, which is located within ntdll. Thus, from the perspective of the antivirus (AV), ntdll would appear to be making a call to another part of ntdll, which is not considered malicious.
 
