@@ -5,17 +5,15 @@
 /////////////////////
 
 typedef struct _NTALLOCATEVIRTUALMEMORY_ARGS {
-    UINT_PTR pNoHookedSyscallAddr;       // pointer to Syscall inst - rax
-    HANDLE hProcess;                     // HANDLE ProcessHandle - rcx
-    PVOID address;                      // PVOID *BaseAddress - rdx; ULONG_PTR ZeroBits - 0 - r8
-    PSIZE_T size;                        // PSIZE_T RegionSize - r9;
+    HANDLE hProcess;
+    PVOID* address;
     SIZE_T zeroBits;
-    ULONG allocationType;                // MEM_RESERVE | MEM_COMMIT = 3000 - stack pointer
-    ULONG permissions;                   // ULONG Protect - PAGE_EXECUTE_READ - 0x20 - stack pointer
-} NTALLOCATEVIRTUALMEMORY_ARGS, * PNTALLOCATEVIRTUALMEMORY_ARGS;
+    PSIZE_T size;
+    ULONG allocationType;
+    ULONG permissions;
+} NTALLOCATEVIRTUALMEMORY_ARGS, *PNTALLOCATEVIRTUALMEMORY_ARGS;
 
 typedef struct _NTWRITEVIRTUALMEMORY_ARGS {
-    UINT_PTR pNoHookedSyscallAddr;
     HANDLE hProcess;
     PVOID address;
     PVOID buffer;
@@ -24,7 +22,6 @@ typedef struct _NTWRITEVIRTUALMEMORY_ARGS {
 } NTWRITEVIRTUALMEMORY_ARGS, * PNTWRITEVIRTUALMEMORY_ARGS;
 
 typedef struct _NTCREATETHREADEX_ARGS {
-    UINT_PTR pNoHookedSyscallAddr;
     PHANDLE threadHandle;        // Pointer to a variable that receives a handle to the new thread
     ACCESS_MASK desiredAccess;   // Desired access to the thread
     PVOID objectAttributes;      // Pointer to an OBJECT_ATTRIBUTES structure that specifies the object's attributes
@@ -42,36 +39,28 @@ typedef struct _NTCREATETHREADEX_ARGS {
 //  ASSEMBLY FUNCTIONS  //
 //////////////////////////
 
+extern "C" void Search_For_Syscall_Ret(
+    HANDLE ntdllHandle
+);
+
+extern "C" void Search_For_Add_Rsp_Ret(
+    HANDLE ntdllHandle
+);
+
 extern "C" void NtAllocateVirtualMemory_Callback(
-    HANDLE processHandle,
-    PVOID address,
-    SIZE_T zeroBits,
-    PSIZE_T size,
-    ULONG allocationType,
-    ULONG permissions,
-    UINT_PTR pNoHookedSyscallAddr
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID Context,
+    PTP_WORK Work
 );
 
 extern "C" void NtWriteVirtualMemory_Callback(
-    HANDLE hProcess,
-    PVOID address,
-    PVOID buffer,
-    ULONG numberOfBytesToWrite,
-    PULONG numberOfBytesWritten,
-    UINT_PTR pNoHookedSyscallAddr
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID Context,
+    PTP_WORK Work
 );
 
 extern "C" void NtCreateThreadEx_Callback(
-    PHANDLE threadHandle,
-    ACCESS_MASK desiredAccess,
-    PVOID objectAttributes,
-    HANDLE processHandle,
-    PVOID lpStartAddress,
-    PVOID lpParameter,
-    ULONG flags,
-    SIZE_T stackZeroBits,
-    SIZE_T sizeOfStackCommit,
-    SIZE_T sizeOfStackReserve,
-    PVOID lpBytesBuffer,
-    UINT_PTR pNoHookedSyscallAddr
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID Context,
+    PTP_WORK Work
 );
