@@ -1,4 +1,4 @@
-# 🦠 Cordyceps
+# Callstack spoofing + Indirect Syscalls POC
 This project consists of a simple C++ self-Injecting dropper focused on EDR evasion POC. To implement it, I have combined the use of  **``Windows Thread Pooling``**  to hide the call stack and the use of  **``indirect syscalls``**  to avoid hooking in the NTDLL.
 <br>
 
