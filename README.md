@@ -15,7 +15,7 @@ This project consists of a simple C++ self-Injecting dropper focused on EDR evas
 As can be seen in the images, from the Cordyceps code, it performs a jump to ntdll to utilize one of the syscall instructions. This should be considered a malicious action; however, upon executing the return in ntdll, we return to the code of tpWorker, which is located within ntdll. Thus, from the perspective of the antivirus (AV), ntdll would appear to be making a call to another part of ntdll, which is not considered malicious.
 
 ## Future Upgrades:
-- [ ] Implement a mechanism to automatically search for the syscall number.
+- [x] Implement a mechanism to automatically search for the syscall number.
 - [ ] In-memory payload decryption.
 
 ## To compile:
