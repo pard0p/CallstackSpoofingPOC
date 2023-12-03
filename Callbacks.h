@@ -11,6 +11,7 @@ typedef struct _NTALLOCATEVIRTUALMEMORY_ARGS {
     PSIZE_T size;
     ULONG allocationType;
     ULONG permissions;
+    DWORD ssn;
 } NTALLOCATEVIRTUALMEMORY_ARGS, *PNTALLOCATEVIRTUALMEMORY_ARGS;
 
 typedef struct _NTWRITEVIRTUALMEMORY_ARGS {
@@ -19,6 +20,7 @@ typedef struct _NTWRITEVIRTUALMEMORY_ARGS {
     PVOID buffer;
     ULONG numberOfBytesToWrite;
     PULONG numberOfBytesWritten;
+    DWORD ssn;
 } NTWRITEVIRTUALMEMORY_ARGS, * PNTWRITEVIRTUALMEMORY_ARGS;
 
 typedef struct _NTCREATETHREADEX_ARGS {
@@ -32,7 +34,8 @@ typedef struct _NTCREATETHREADEX_ARGS {
     SIZE_T stackZeroBits;        // A pointer to a variable that specifies the number of high-order address bits that must be zero in the stack pointer
     SIZE_T sizeOfStackCommit;    // The size of the stack that must be committed at thread creation
     SIZE_T sizeOfStackReserve;   // The size of the stack that must be reserved at thread creation
-    PVOID lpBytesBuffer;          // Pointer to a variable that receives any output data from the system
+    PVOID lpBytesBuffer;         // Pointer to a variable that receives any output data from the system
+    DWORD ssn;                   // SSN
 } NTCREATETHREADEX_ARGS, * PNTCREATETHREADEX_ARGS;
 
 //////////////////////////
