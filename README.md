@@ -22,7 +22,7 @@ As can be seen in the images, from the Cordyceps code, it performs a jump to ntd
 
 ```bash
 nasm -f win64 ./syscalls.asm -o ./syscalls.obj
-g++ -o cordyceps.exe main.cpp syscalls.obj
+g++ -o poc.exe main.cpp syscalls.obj
 ```
 
 ## Resources:
