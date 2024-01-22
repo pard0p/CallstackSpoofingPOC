@@ -25,14 +25,14 @@ nasm -f win64 ./syscalls.asm -o ./syscalls.obj
 g++ -o cordyceps.exe main.cpp syscalls.obj
 ```
 
-## ⚠️Attention:
-
-This POC has been developed for Windows 10. To use it in a real environment the syscalls should be adapted for the corresponding Windows version.
-
 ## Resources:
 
 https://0xdarkvortex.dev/hiding-in-plainsight/
+
 https://redops.at/en/blog/direct-syscalls-vs-indirect-syscalls
+
 https://captmeelo.com/redteam/maldev/2022/05/10/ntcreateuserprocess.html
+
 https://klezvirus.github.io/RedTeaming/AV_Evasion/StackSpoofing/
+
 https://medium.com/@sruthk/cracking-assembly-fastcall-calling-convention-in-x64-c6d77b51ea86
