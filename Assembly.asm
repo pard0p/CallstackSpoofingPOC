@@ -5,8 +5,7 @@ add_rsp_ret dq 0000000000000000h
 
 section .text
 
-global FindMZ
-global GetSSN
+global GetSSNByFuncAddress
 global Search_For_Syscall_Ret
 global Search_For_Add_Rsp_Ret
 global NtAllocateVirtualMemory_Callback
@@ -116,27 +115,15 @@ Search_For_Add_Rsp_Ret:
     mov [r15], rdx
     ret
 
-FindMZ:
-    mov rbx, 0000000300905A4Dh
-    cmp rcx, 0
-    jne FindMZ + 1Ah
-    mov rcx, FindMZ - 30h
-    sub rcx, 1
-    mov rdx, [rcx]
-    cmp rbx, rdx
-    jne FindMZ + 1Ah
-    mov rax, rcx
-    ret
-
-GetSSN:
+GetSSNByFuncAddress:
     mov ebx, 0xB8D18B4C
     mov rdx, 0x0
     mov rax, [rcx]
     cmp eax, ebx
-    je GetSSN + 0x1B
+    je GetSSNByFuncAddress + 0x1B
     add rcx, 0x20
     add rdx, 0x1
-    jmp GetSSN + 0xA
+    jmp GetSSNByFuncAddress + 0xA
     mov rax, [rcx + 0x4]
     sub rax, rdx
     ret
