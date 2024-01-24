@@ -95,7 +95,7 @@ DWORD GetSSN(const char* functionName) {
 VOID initVariables() {
     unsigned char sNtdll[] = { 'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0x0 };
     //hNtdll = GetModuleHandleA((LPCSTR)sNtdll);
-    hNtdll = getNtdllHandle(FindMZ(0));
+    hNtdll = GetNtdllHandle();
 
     Search_For_Syscall_Ret(hNtdll);
     Search_For_Add_Rsp_Ret(hNtdll);
