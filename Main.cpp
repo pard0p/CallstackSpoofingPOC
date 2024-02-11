@@ -127,7 +127,7 @@ PVOID NtAllocateVirtualMemory(HANDLE hProcess) {
     SIZE_T allocatedsize = 0x1000;
 
     NTALLOCATEVIRTUALMEMORY_ARGS ntAllocateVirtualMemoryArgs = { 0 };
-    ntAllocateVirtualMemoryArgs.hProcess = (HANDLE)-1;
+    ntAllocateVirtualMemoryArgs.hProcess = hProcess;
     ntAllocateVirtualMemoryArgs.address = &allocatedAddress;
     ntAllocateVirtualMemoryArgs.zeroBits = 0;
     ntAllocateVirtualMemoryArgs.size = &allocatedsize;
